@@ -16,9 +16,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 import c from 'classnames';
-import React, { useMemo, useState } from 'react';
-import jwt from 'jsonwebtoken';
-import cookies from 'js-cookie';
+import React, { useState } from 'react';
+// import jwt from 'jsonwebtoken';
+// import cookies from 'js-cookie';
 import PropTypes from 'prop-types';
 import {
   DetailsList,
@@ -35,82 +35,54 @@ import {
 import t from '../../../components/tachyons.scss';
 import CopyButton from '../../../components/copy-button';
 
-const TokenList = ({ tokens, onRevoke }) => {
+const SSHlist = ({ sshKeys, onDeleteSSHkeys }) => {
   const [processing, setProcessing] = useState(false);
-  const [revokeToken, setRevokeToken] = useState(null);
-
-  const tokenItems = useMemo(() => {
-    return tokens
-      .map(x => ({
-        ...jwt.decode(x),
-        value: x,
-      }))
-      .sort((a, b) => b.iat - a.iat);
-  }, [tokens]);
-  
-  const tokenColumns = [
+  const [hideDeleteDialog, setHideDeleteDialog] = useState(true);
+  const [deleteSSHItem, setDeleteSSHItem] = useState({});
+  const sshList = sshKeys.sort((a, b) => b.time - a.time);
+  const sshColumns = [
     {
       key: 'value',
-      minWidth: 120,
+      minWidth: 280,
       name: 'Value',
       isResizable: true,
-      onRender(token) {
+      onRender(ssh) {
         return (
           <div className={c(t.flex, t.itemsCenter, t.h100)}>
-            <div className={t.truncate}>{token.value}</div>
-            <CopyButton value={token.value} />
+            <div className={t.truncate}>{ssh.sshValue}</div>
+            <CopyButton value={ssh.sshValue} />
           </div>
         );
       },
     },
     {
-      key: 'iat',
-      minWidth: 150,
+      key: 'title',
+      minWidth: 210,
+      name: 'Title',
+      isResizable: true,
+      onRender(ssh) {
+        return (
+          <div className={c(t.flex, t.itemsCenter, t.h100)}>{ssh.title}</div>
+        );
+      },
+    },
+    {
+      key: 'time',
+      minWidth: 230,
       maxWidth: 150,
-      name: 'Issued At',
+      name: 'Created Time',
       isResizable: true,
-      onRender(token) {
+      onRender(ssh) {
         return (
           <div className={c(t.flex, t.itemsCenter, t.h100)}>
-            {new Date(token.iat * 1000).toLocaleString()}
-          </div>
-        );
-      },
-    },
-    {
-      key: 'exp',
-      minWidth: 150,
-      maxWidth: 150,
-      name: 'Expiration Time',
-      isResizable: true,
-      onRender(token) {
-        return (
-          <div className={c(t.flex, t.itemsCenter, t.h100)}>
-            {token.exp && new Date(token.exp * 1000).toLocaleString()}
-          </div>
-        );
-      },
-    },
-    {
-      key: 'type',
-      minWidth: 150,
-      name: 'Token Type',
-      isResizable: true,
-      onRender(token) {
-        return (
-          <div className={c(t.flex, t.itemsCenter, t.h100)}>
-            {token.application
-              ? 'Application'
-              : token.value === cookies.get('token')
-              ? 'Browser (Current)'
-              : 'Browser'}
+            {new Date(ssh.time).toLocaleString()}
           </div>
         );
       },
     },
     {
       key: 'action',
-      minWidth: 100,
+      minWidth: 160,
       name: 'Action',
       isResizable: true,
       onRender(token) {
@@ -122,8 +94,11 @@ const TokenList = ({ tokens, onRevoke }) => {
                 rootDisabled: { backgroundColor: 'transparent' },
               }}
               iconProps={{ iconName: 'Delete' }}
-              text='Revoke'
-              onClick={() => setRevokeToken(token.value)}
+              text='Delete'
+              onClick={() => {
+                setHideDeleteDialog(false);
+                setDeleteSSHItem(token);
+              }}
               disabled={processing}
             />
           </div>
@@ -135,31 +110,31 @@ const TokenList = ({ tokens, onRevoke }) => {
   return (
     <div>
       <DetailsList
-        columns={tokenColumns}
+        columns={sshColumns}
         disableSelectionZone
-        items={tokenItems}
+        items={sshList}
         layoutMode={DetailsListLayoutMode.justified}
         selectionMode={SelectionMode.none}
       />
       <Dialog
-        hidden={!revokeToken}
-        onDismiss={() => setRevokeToken(null)}
+        hidden={hideDeleteDialog}
+        onDismiss={() => setHideDeleteDialog(true)}
         dialogContentProps={{
           type: DialogType.normal,
-          title: 'Revoke Token',
+          title: 'Delete SSH Public Keys',
         }}
         modalProps={{
           isBlocking: true,
         }}
         minWidth={400}
       >
-        <div>Are you sure you want to revoke the selected token?</div>
+        <div>Are you sure you want to delete this ssh key?</div>
         <DialogFooter>
           <PrimaryButton
             onClick={() => {
               setProcessing(true);
-              onRevoke(revokeToken).finally(() => {
-                setRevokeToken(null);
+              onDeleteSSHkeys(deleteSSHItem).finally(() => {
+                setHideDeleteDialog(true);
                 setProcessing(false);
               });
             }}
@@ -167,7 +142,7 @@ const TokenList = ({ tokens, onRevoke }) => {
             text='Confirm'
           />
           <DefaultButton
-            onClick={() => setRevokeToken(null)}
+            onClick={() => setHideDeleteDialog(true)}
             disabled={processing}
             text='Cancel'
           />
@@ -177,13 +152,13 @@ const TokenList = ({ tokens, onRevoke }) => {
   );
 };
 
-TokenList.defaultProps = {
-  tokens: [],
+// SSHlist.defaultProps = {
+//   sshKeys: [],
+// };
+
+SSHlist.propTypes = {
+  sshKeys: PropTypes.array,
+  onDeleteSSHkeys: PropTypes.func.isRequired,
 };
 
-TokenList.propTypes = {
-  tokens: PropTypes.arrayOf(PropTypes.string),
-  onRevoke: PropTypes.func.isRequired,
-};
-
-export default TokenList;
+export default SSHlist;
